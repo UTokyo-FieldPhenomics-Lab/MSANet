@@ -16,7 +16,7 @@ def get_arguments():
     parser.add_argument('--alpha', default=0.5, type=float)
     parser.add_argument('--beta', default=0.9, type=float)
     parser.add_argument('--gamma', default=0.5, type=float)
-    parser.add_argument('--epochs', default=3000, type=int)
+    parser.add_argument('--epochs', default=300, type=int)
 
     # Model parameters
     parser.add_argument('--frozen_weights', type=str, default=None,
@@ -28,7 +28,7 @@ def get_arguments():
 
     # dataset parameters
     parser.add_argument('--dataset_file', default='Soy')
-    parser.add_argument('--data_root', default='../soybean-data/Soybean_seed_counting/',
+    parser.add_argument('--data_root', default='../data/soypod-200-txt',
                         help='path where the dataset is')
     
     parser.add_argument('--output_dir', default='./runs',
