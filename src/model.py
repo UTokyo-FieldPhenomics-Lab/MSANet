@@ -25,13 +25,10 @@ class SoyModel(nn.Module):
     def upsample_conv(self, x, conv):
         return conv(nn.UpsamplingNearest2d(scale_factor=2)(x))
 
-    def forward(self, x):
+    def forward(self, x, inference=False):
         act = nn.Sigmoid()
         x1 ,x2, x3, x4 = self.backbone(x)
-        # print(x1.shape)
-        # print(x2.shape)
-        # print(x3.shape)
-        # print(x4.shape)
+
         bx4 = self.c1(x4)
         bx3 = self.upsample_conv(torch.cat((bx4, x4), 1), self.c2)
         bx2 = self.upsample_conv(torch.cat((bx3, x3), 1), self.c3)
@@ -39,4 +36,7 @@ class SoyModel(nn.Module):
         bx0 = self.upsample_conv(torch.cat((bx1, x1), 1), self.c5)
         bx0 = self.upsample_conv(bx0, self.c6)
 
-        return act(bx0), act(bx1), act(bx2), act(bx3), act(bx4)
+        if inference:
+            return act(bx0)
+        else:
+            return act(bx0), act(bx1), act(bx2), act(bx3), act(bx4)
