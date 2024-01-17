@@ -24,13 +24,17 @@ if __name__ == "__main__":
         # always run evaluation first (to check what model has been loaded !!!)
         if engine.epoch==0 or args.resume!='':
             t1 = time.time()
-            r2, mae = engine.evaluation()
+            r2, mae, eval_loss = engine.evaluation()
             t2 = time.time()
             # print the evaluation results
             print('=======================================Evaluation=======================================')
             print(f"[Epoch {engine.epoch}] R2: {r2:.4f}, mae: {mae:.4f}, time: {(t2-t1):.2f}s, best mae: {engine.best_mae:.4f}, at epoch: {engine.best_mae_epoch}")
             print('=======================================Evaluation=======================================')
 
+            # # print the evaluation results
+            # print('=======================================Evaluation=======================================')
+            # print(f"[Epoch {engine.epoch}] R2: {r2:.4f}, mae: {mae:.4f}, time: {(t2-t1):.2f}s, best eval loss: {engine.best_eval_loss:.4f}, at epoch: {engine.best_eval_loss_epoch}")
+            # print('=======================================Evaluation=======================================')
         # train
         t1 = time.time()
         avg_loss = engine.train_one_epoch()
@@ -41,7 +45,7 @@ if __name__ == "__main__":
         # evaluation
         if engine.epoch%args.eval_freq==0:
             t1 = time.time()
-            r2, mae = engine.evaluation()
+            r2, mae, eval_loss = engine.evaluation()
             t2 = time.time()
             # print the evaluation results
             print('=======================================Evaluation=======================================')
@@ -57,6 +61,7 @@ if __name__ == "__main__":
             print(f'saving checkpoints @epoch {engine.epoch}')
             torch.save(engine.get_checkpoint(), f'{ckpt_dir}/epoch_{engine.epoch}.pth')
 
+        torch.save(engine.best_model, f'{ckpt_dir}/epoch_{engine.best_mae_epoch:.4f}_mae_{engine.best_mae}.pth')
     print(f'Training process finished, best mae; {engine.best_mae:.4f}')
     torch.save(engine.best_model, f'{ckpt_dir}/best_mae.pth')
     engine.writer.close()
