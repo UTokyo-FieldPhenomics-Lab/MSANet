@@ -24,6 +24,7 @@ from albumentations.pytorch import ToTensorV2
 
 from model import SoyModel
 from dataset import Soy
+from utils import *
 
 # from tqdm import tqdm
 
@@ -87,9 +88,13 @@ class trainer:
             # self.r2s = self.checkpoint['r2s']
             self.best_mae = self.checkpoint['best_mae']
             self.best_mae_epoch = self.checkpoint['best_mae_epoch']
+
+            self.best_eval_loss = self.checkpoint['best_eval_loss']
+            self.best_eval_loss_epoch = self.checkpoint['best_eval_loss_epoch']
             lr_schedular_state_dict = self.checkpoint['lr_schedular_state_dict']
         else:
             self.best_mae = float('inf')
+            self.best_eval_loss = float('inf')
             self.epoch = 0
             self.iter = 0
             # self.maes = []
@@ -104,7 +109,7 @@ class trainer:
 
         # get optimizer
         self.optim = self.get_optim()
-        self.lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optim, milestones=args.lr_drop, gamma=args.gamma)
+        self.lr_scheduler = torch.optim.lr_scheduler.LinearLR(self.optim, start_factor=0.1, total_iters=5)
         if self.args.resume != '':
             self.lr_scheduler.load_state_dict(lr_schedular_state_dict)
 
@@ -135,14 +140,15 @@ class trainer:
         transform_train = A.Compose(
             [   
                 A.ShiftScaleRotate(shift_limit=0.,
-                        scale_limit=(-0.6, 0.5),
+                        scale_limit=(-0.4, 0.4),
                         rotate_limit=90, p=0.5),
+                # A.LongestMaxSize(max_size=512),
+                A.PadIfNeeded(min_height=512, min_width=512, border_mode=cv2.BORDER_CONSTANT, value=0),
+                A.RandomCrop(512, 512, p=1.0),
                 A.VerticalFlip(p=0.5),  
-                A.RandomCrop(256, 256, p=1.0),
                 A.Blur(p=0.5),
-                A.PadIfNeeded(min_height=256, min_width=256, border_mode=cv2.BORDER_CONSTANT, value=0),
 
-                A.RandomBrightness((-0.2, 0.5), p=0.5),
+                A.RandomBrightness((-0.5, 0.5), p=0.5),
                 A.Normalize(mean=(0.485, 0.456, 0.406),
                             std=(0.229, 0.224, 0.225)),
                 ToTensorV2(),
@@ -169,6 +175,7 @@ class trainer:
 
     def get_criterian(self):
         return nn.MSELoss()
+        # return nn.BCELoss()
     
     def train_one_epoch(self):
         self.epoch += 1
@@ -176,7 +183,7 @@ class trainer:
         batch_loss = 0.
         len_train = len(self.dataloader_train)
 
-        for img, label256 in self.dataloader_train:
+        for img, label256, target in self.dataloader_train:
             self.iter += 1
             self.optim.zero_grad()
 
@@ -200,6 +207,7 @@ class trainer:
             loss_8 = self.criterian(label8, bx4) 
 
             train_loss = loss_256 + loss_64 + loss_32 + loss_16 + loss_8
+            # print(loss_256.item())
             # train_loss = loss_256
             # Update gradients
             train_loss.backward()
@@ -229,7 +237,7 @@ class trainer:
     def visualization(self):
         self.model.eval()
 
-        img, label256 = next(iter(self.dataloader_train))
+        img, label256, _ = next(iter(self.dataloader_train))
 
         img = img.to(self.device)
         label256 = torch.unsqueeze(label256, 1)
@@ -255,7 +263,7 @@ class trainer:
             points = np.argwhere(coords > .1)
             # print(np.unique(coords))
             pred_points  = np.argwhere(preds > .1)
-            pred_center  = np.argwhere(preds > .8)
+            pred_center  = np.argwhere(preds > .5)
             # print('points:', points)
             x = points[:, 0]
             y = points[:, 1]
@@ -265,9 +273,9 @@ class trainer:
             pyc = pred_center[:, 1]
 
             ax.imshow(image_tensor)
-            ax.plot(y, x, marker='.', color='r', ls='')
-            ax.plot(py, px, marker='.', color='b', ls='')
-            ax.plot(pyc, pxc, marker='.', color='g', ls='')
+            ax.plot(y, x, marker='.', color='r', ls='', alpha=.5)
+            ax.plot(py, px, marker='.', color='b', ls='', alpha=.5)
+            ax.plot(pyc, pxc, marker='.', color='g', ls='', alpha=.5)
 
         # self.writer.add_figure('figure', fig, self.epoch)
 
@@ -278,24 +286,34 @@ class trainer:
         self.model.eval()
         gts = []
         preds = []  
+        eval_loss = .0
         with torch.no_grad():
-            for img, points in self.dataloader_val:
+            for img, points, mask, target in self.dataloader_val:
         
                 img = img.to(self.device)
-                bx0, _, _, _, _ = self.model(img)
+
+                mask = torch.unsqueeze(mask, 1)
+                mask = mask.float().to(self.device)
+
+                bx0 = self.model(img, inference=True)
                 # bx0 = self.model(img)['out']
+                loss = self.criterian(mask, bx0)
                 rst = bx0.squeeze(0).permute(1, 2, 0).detach().cpu().numpy()
-                coordinates = peak_local_max(rst[..., 0], min_distance=5, threshold_abs=0.1)
+                # coordinates = peak_local_max(rst[..., 0], min_distance=10, threshold_abs=0.1)
+                coordinates = extract_centroids(rst[..., 0], threshold=0.1)
 
                 gts.append(len(points[0]))
                 preds.append(len(coordinates))
+                eval_loss += loss.item()
         r2 = r2_score(gts, preds)
         mae = mean_absolute_error(gts, preds)
+        eval_loss /= len(self.dataloader_val)
 
         self.writer.add_scalars('data/metrics',
                                 {
                                     'R2_score': r2,
-                                    'MAE': mae
+                                    'MAE': mae,
+                                    'eval_loss': eval_loss
                                 },
                                 self.epoch)
         # self.maes.append(round(mae, 4))
@@ -306,8 +324,13 @@ class trainer:
             self.best_mae = mae
             self.best_mae_epoch = self.epoch
             self.best_model = copy.deepcopy(self.get_checkpoint())
+        # if eval_loss < self.best_eval_loss:
+        #     print('replacing best model')
+        #     self.best_eval_loss = eval_loss
+        #     self.best_eval_loss_epoch = self.epoch
+        #     self.best_model = copy.deepcopy(self.get_checkpoint())
 
-        return r2, mae
+        return r2, mae, eval_loss
     
     def get_checkpoint(self):
         return{
@@ -319,5 +342,7 @@ class trainer:
                 # 'maes': self.maes,
                 # 'r2s': self.r2s,
                 'best_mae': self.best_mae,
-                'best_mae_epoch': self.best_mae_epoch
+                'best_mae_epoch': self.best_mae_epoch,
+                # 'best_eval_loss': self.best_eval_loss,
+                # 'best_eval_loss_epoch': self.best_eval_loss_epoch
             }

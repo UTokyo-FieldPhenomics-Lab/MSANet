@@ -53,6 +53,12 @@ class Soy(Dataset):
         gt_path = self.label_list[index]
         # 
         img, point = load_data(img_path, gt_path)
+        h, w, _ = img.shape
+        target = {
+                'name': img_path.split('/')[-1],
+                'height': h,
+                'width': w
+            }
         #
         if self.train:
             mask = np.zeros_like(img)[... ,0]
@@ -68,21 +74,35 @@ class Soy(Dataset):
             mask = skimage.morphology.dilation(mask, ellipse(5, 5))
             mask = filters.gaussian(mask,sigma=5, mode='nearest',preserve_range=True, truncate=1)
             mask[mask>0.9] = 1
+
+            
             if self.transform:
                 transformed = self.transform(image=img, mask=mask)
                 # mask = self.transforms(mask)
                 img = transformed['image']
                 mask = transformed['mask']
 
-            return img, mask
+            return img, mask, target
         
         else:
             h, w, _ = img.shape
+
+            mask = np.zeros_like(img)[... ,0]
+            point_int = np.trunc(point).astype(np.int32)
+            # h, w, _ = img.shape
+            x = point_int[:, 0]
+            y = point_int[:, 1]
+            # print(x.max(), y.max())
+            mask[y, x] = 1
+
+            mask = skimage.morphology.dilation(mask, ellipse(5, 5))
+            mask = filters.gaussian(mask,sigma=5, mode='nearest',preserve_range=True, truncate=1)
+            mask[mask>0.9] = 1
             if self.transform:
-                transformed = self.transform(image=img)
-                # mask = self.transforms(mask)
+                transformed = self.transform(image=img, mask=mask)
+                mask = transformed['mask']
                 img = transformed['image']
-            return img, point
+            return img, point, mask, target
         #  need to adapt your own image names
         # target = {}
 
@@ -107,3 +127,4 @@ def load_data(img_path, gt_path):
     coords_round = np.trunc(coords_np).astype(np.int32)
 
     return img_np, coords_round
+
