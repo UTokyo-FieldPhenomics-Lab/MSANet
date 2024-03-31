@@ -41,4 +41,4 @@ We also provide the comparision results with P2PNet-Soy (Jiangsan et al., 2023),
 
 
 ## Inference
-To inference the model, here's an introduction here on Colab: here
+To inference the model, here's an introduction [here on Colab](https://colab.research.google.com/drive/1idp0hIjD1JUTOiukibZl9BQ3GsQy1oND?usp=sharing).
