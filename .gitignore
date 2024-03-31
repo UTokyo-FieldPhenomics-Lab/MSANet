@@ -1,12 +1,10 @@
 *.png
 *.csv
-*.ipynb
+# *.ipynb
 data
-evaluation_vis
-evaluation_visualization
+
 results/
 seeds_distribution
-vis
 runs
 
 */__pycache__/
