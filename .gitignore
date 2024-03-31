@@ -7,3 +7,6 @@ evaluation_visualization
 results/
 seeds_distribution
 vis
+runs
+
+*/__pycache__/
