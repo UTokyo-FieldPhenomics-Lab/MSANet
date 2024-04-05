@@ -1,7 +1,7 @@
 # MSANet: Multi-Scale Attention Network for Vertical Seed Distribution in Soybean Breeding Fields
 
 ## Dataset
-Please fill [this form](https://forms.gle/bKRyYLoW7AEC2mQC7) to get download link of the datasets and pretrained weights.
+Please fill [this form](https://forms.gle/FJcGXXL8AB9J3Ajp7) to get download link for the datasets and pre-trained weights.
 
 ## Train
 ### Train the MSANet with our datasets:
