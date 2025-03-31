@@ -21,7 +21,6 @@ from tensorboardX import SummaryWriter
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-from pytorch_msssim import ssim
 
 from model import SoyModel
 from dataset import Soy
@@ -180,7 +179,7 @@ class trainer:
                 # A.LongestMaxSize(max_size=1024),
                 A.PadIfNeeded(min_height=None, min_width=None,
                             pad_height_divisor=32, pad_width_divisor=32,
-                            position=A.PadIfNeeded.PositionType.TOP_LEFT,
+                            position='top_left',
                             border_mode=cv2.BORDER_CONSTANT, value=0),
                 # A.CenterCrop(1024, 1024, p=1.0),
                 # A.VerticalFlip(p=0.5),
@@ -208,7 +207,7 @@ class trainer:
             [   
                 A.PadIfNeeded(min_height=None, min_width=None,
                             pad_height_divisor=32, pad_width_divisor=32,
-                            position=A.PadIfNeeded.PositionType.TOP_LEFT,
+                            position='top_left',
                             border_mode=cv2.BORDER_CONSTANT, value=0),
                 A.Normalize(mean=(0.485, 0.456, 0.406),
                             std=(0.229, 0.224, 0.225)),

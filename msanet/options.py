@@ -7,12 +7,12 @@ def get_arguments():
     """
     parser = argparse.ArgumentParser(description="Object Counting Framework")
     # project name
-    parser.add_argument('--project_name', default='soy-aug')
+    parser.add_argument('--project_name', default='soy-test')
 
     # constant
     parser.add_argument('--lr', default=1e-4, type=float)
     parser.add_argument('--lr_drop', default=[], type=int)
-    parser.add_argument('--batch_size', default=16, type=int)
+    parser.add_argument('--batch_size', default=1, type=int)
     parser.add_argument('--alpha', default=0.5, type=float)
     parser.add_argument('--beta', default=0.9, type=float)
     parser.add_argument('--gamma', default=0.5, type=float)
@@ -28,7 +28,7 @@ def get_arguments():
 
     # dataset parameters
     parser.add_argument('--dataset_file', default='Soy')
-    parser.add_argument('--data_root', default='../data/soypod-200-txt',
+    parser.add_argument('--data_root', default='../data/2021_dataset',
                         help='path where the dataset is')
     
     parser.add_argument('--output_dir', default='./runs',
